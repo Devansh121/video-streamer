@@ -11,4 +11,5 @@ def test_upload_returns_202() -> None:
         files={"file": ("test.mp4", b"fake video content", "video/mp4")},
     )
     assert response.status_code == 202
-    assert response.json()["filename"] == "test.mp4"
+    assert "job_id" in response.json()
+    assert response.json()["status"] == "failed"
