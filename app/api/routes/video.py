@@ -5,7 +5,7 @@ from fastapi import APIRouter, UploadFile
 from fastapi.responses import JSONResponse
 
 from app.models.job import TranscodeJob
-from app.services.transcoder import run_transcode
+from app.services.hls import run_hls_segmentation
 
 router = APIRouter(prefix="/videos", tags=["videos"])
 
@@ -15,7 +15,7 @@ async def upload_video(file: UploadFile) -> JSONResponse:
 
     with tempfile.TemporaryDirectory() as temp_dir:
         input_path = Path(temp_dir) / (file.filename or "input.mp4")
-        output_path = Path(temp_dir) / "output.mp4"
+        output_path = Path(temp_dir) / "hls_output"
 
         contents = await file.read()
         input_path.write_bytes(contents)
@@ -24,7 +24,7 @@ async def upload_video(file: UploadFile) -> JSONResponse:
             input_path=str(input_path),
             output_path=str(output_path),
         )
-        job = run_transcode(job)
+        job = run_hls_segmentation(job)
 
     return JSONResponse(
         status_code=202,
