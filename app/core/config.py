@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     app_name: str = "video-streamer"
     debug: bool = False
     upload_dir: str = "/tmp/uploads"
+    redis_url: str = "redis://localhost:6379"
 
 
 settings = Settings()

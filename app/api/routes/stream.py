@@ -1,24 +1,34 @@
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Request, UploadFile
+from fastapi.responses import JSONResponse
 
-router = APIRouter(prefix="/stream", tags=["stream"])
+from app.models.job import JobStatus, TranscodeJob
+
+router = APIRouter(prefix="/videos", tags=["videos"])
 
 HLS_BASE_DIR = Path("/tmp/hls")
 
 
-@router.get("/{video_id}/playlist.m3u8")
-async def get_playlist(video_id: str) -> FileResponse:
-    playlist_path = HLS_BASE_DIR / video_id / "playlist.m3u8"
-    if not playlist_path.exists():
-        raise HTTPException(status_code=404, detail="Playlist not found")
-    return FileResponse(playlist_path, media_type="application/x-mpegURL")
+@router.post("/upload", status_code=202)
+async def upload_video(file: UploadFile, request: Request) -> JSONResponse:
+    job = TranscodeJob(
+        input_path="",
+        output_path="",
+    )
 
+    input_path = Path(f"/tmp/{job.job_id}_input.mp4")
+    output_path = HLS_BASE_DIR / job.job_id
 
-@router.get("/{video_id}/{segment}")
-async def get_segment(video_id: str, segment: str) -> FileResponse:
-    segment_path = HLS_BASE_DIR / video_id / segment
-    if not segment_path.exists():
-        raise HTTPException(status_code=404, detail="Segment not found")
-    return FileResponse(segment_path, media_type="video/MP2T")
+    contents = await file.read()
+    input_path.write_bytes(contents)
+
+    job.input_path = str(input_path)
+    job.output_path = str(output_path)
+
+    await request.app.state.redis.enqueue_job("transcode_video", job.model_dump())
+
+    return JSONResponse(
+        status_code=202,
+        content={"job_id": job.job_id, "status": JobStatus.pending},
+    )

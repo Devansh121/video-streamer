@@ -1,10 +1,9 @@
 from pathlib import Path
 
-from fastapi import APIRouter, UploadFile
+from fastapi import APIRouter, Request, UploadFile
 from fastapi.responses import JSONResponse
 
-from app.models.job import TranscodeJob
-from app.services.hls import run_hls_segmentation
+from app.models.job import JobStatus, TranscodeJob
 
 router = APIRouter(prefix="/videos", tags=["videos"])
 
@@ -12,7 +11,7 @@ HLS_BASE_DIR = Path("/tmp/hls")
 
 
 @router.post("/upload", status_code=202)
-async def upload_video(file: UploadFile) -> JSONResponse:
+async def upload_video(file: UploadFile, request: Request) -> JSONResponse:
     job = TranscodeJob(
         input_path="",
         output_path="",
@@ -26,11 +25,10 @@ async def upload_video(file: UploadFile) -> JSONResponse:
 
     job.input_path = str(input_path)
     job.output_path = str(output_path)
-    job = run_hls_segmentation(job)
 
-    input_path.unlink(missing_ok=True)
+    await request.app.state.redis.enqueue_job("transcode_video", job.model_dump())
 
     return JSONResponse(
         status_code=202,
-        content={"job_id": job.job_id, "status": job.status},
+        content={"job_id": job.job_id, "status": JobStatus.pending},
     )

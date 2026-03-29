@@ -1,10 +1,10 @@
-import subprocess
+import asyncio
 from pathlib import Path
 
 from app.models.job import JobStatus, TranscodeJob
 
 
-def run_hls_segmentation(job: TranscodeJob) -> TranscodeJob:
+async def run_hls_segmentation(job: TranscodeJob) -> TranscodeJob:
     output_dir = Path(job.output_path)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -31,11 +31,14 @@ def run_hls_segmentation(job: TranscodeJob) -> TranscodeJob:
     ]
 
     job.status = JobStatus.processing
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    process = await asyncio.create_subprocess_exec(
+        *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+    )
+    _, stderr = await process.communicate()
 
-    if result.returncode != 0:
+    if process.returncode != 0:
         job.status = JobStatus.failed
-        job.error = result.stderr
+        job.error = stderr.decode()
     else:
         job.status = JobStatus.completed
 
