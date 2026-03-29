@@ -1,6 +1,8 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
+from arq import create_pool
+from arq.connections import RedisSettings
 from fastapi import FastAPI
 
 from app.api.routes import stream, video
@@ -9,9 +11,9 @@ from app.core.config import settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    # statup: runs before the app starts accepting requests
+    app.state.redis = await create_pool(RedisSettings.from_dsn(settings.redis_url))
     yield
-    # shutdown: runs after the app stops accepting requests
+    await app.state.redis.close()
 
 
 def create_app() -> FastAPI:
