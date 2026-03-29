@@ -15,3 +15,11 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+
+  localstack:
+    image: localstack/localstack:3.8.1
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3
+      - DEFAULT_REGION=us-east-1

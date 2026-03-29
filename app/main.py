@@ -7,10 +7,12 @@ from fastapi import FastAPI
 
 from app.api.routes import stream, video
 from app.core.config import settings
+from app.storage.s3 import ensure_bucket_exists
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    await ensure_bucket_exists()
     app.state.redis = await create_pool(RedisSettings.from_dsn(settings.redis_url))
     yield
     await app.state.redis.close()
