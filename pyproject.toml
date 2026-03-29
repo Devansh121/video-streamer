@@ -13,6 +13,7 @@ dependencies = [
     "python-multipart>=0.0.12",
     "arq>=0.26.0",
     "redis>=5.0.0",
+    "aioboto3>=13.0.0",
 ]
 
 [project.optional-dependencies]
@@ -34,6 +35,10 @@ select = ["E", "W", "F", "I", "B", "UP"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
+
+[[tool.mypy.overrides]]
+module = ["aioboto3", "botocore.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
